@@ -20,14 +20,15 @@ __email__ = ''
 __status__ = 'Prototype'
 
 
-def run_query(query):
+def run_query(query, return_data=False):
     """
     :param query: a cypher statement as a string to run
     """
     # Start a neo4j session, run a query, then close the session
-    session = driver.session()
-    query = session.run(query)
-    session.close()
+    with driver.session() as session:
+        query = session.run(query)
+        if return_data:
+            return query.data()
     return query
 
 
@@ -35,8 +36,7 @@ def node_labels():
     # Create a list of dictionaries where each key is "labels(n)"
     # and each value is a list containing a node label
     labels = "MATCH (n) RETURN distinct labels(n)"
-    query = run_query(labels)
-    data = query.data()
+    data = run_query(labels, return_data=True)
     label_list = []
     # Iterate through the list and dicitionaries to create a list
     # of node labels
@@ -55,7 +55,7 @@ def create_index(label_list, property_name):
     # For every label in the label list, create an index
     # on the given property name
     for label in label_list:
-        index_query = "CREATE INDEX ON :`" + label + "` (" + property_name + ")"
+        index_query = "CREATE INDEX FOR (var:`" + label + "`) ON var." + property_name + ""
         run_query(index_query)
 
 
@@ -65,7 +65,7 @@ def constraint(label_list):
     """
     # For every label in the label list, create a unique constraint
     # on the node id property
-    constraint_query = "CREATE CONSTRAINT ON (n:Base) ASSERT n.id IS UNIQUE"
+    constraint_query = "CREATE CONSTRAINT FOR (n:Base) REQUIRE n.id IS UNIQUE"
     run_query(constraint_query)
 
 
